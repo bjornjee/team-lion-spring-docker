@@ -12,8 +12,6 @@ import com.example.teamlion.utils.model.UtilModel;
 
 
 import org.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +37,6 @@ import java.util.stream.Collectors;
 @Service
 public class MarketService {
 
-    private Logger logger = LoggerFactory.getLogger(MarketService.class);
     @Autowired
     private MarketRepository marketRepository;
     @Autowired
@@ -60,12 +57,12 @@ public class MarketService {
     	// Check if user is registered
     	UtilModel m = utils.decoder(token);
     	if (!registered(m)) {
-    		logger.info("User not registered!");
+    		log.info("User not registered!");
     		return null;
     	}
         //Check if stock exists in database
         List<Stock> dates = marketRepository.getStockBySymbolInRange(symbol,start,end);
-        logger.info(dates.toString());
+        log.info(dates.toString());
         if (dates.isEmpty()) {
         	//if range does not exist, fetch everything
         	runPythonScript(symbol,start,end);
@@ -111,7 +108,7 @@ public class MarketService {
     }
 
     private void runPythonScript(String symbol, String start, String end) {
-    	logger.info("In runPythonScript()");
+    	log.info("In runPythonScript()");
     	try  {
     	   String cmd = String.format("%s %s %s %s %s %s",
     			   pythonExe,
@@ -120,21 +117,23 @@ public class MarketService {
     			   symbol,
     			   start,
     			   end);
-    	   logger.info(cmd);
+    	   log.info(cmd);
     	   Process p = Runtime.getRuntime().exec(cmd);
 	    	   
 	    } catch (IOException ex) {
-	    	logger.info(ex.toString());
+	    	log.info(ex.toString());
 	    }
     }
     
     public void runPythonScriptRest(String symbol, String start, String end) {
     	JSONObject jsonObject = new JSONObject();
-    	logger.info("In function: runPythonScriptRest");
+    	log.info("In function: runPythonScriptRest");
+    	//Set url
+    	final String endPoint = "/api/stock/";
     	// set request body
 		try {
 			RestTemplate restTemplate = new RestTemplate();
-			URI uri = new URI(pythonUrl);
+			URI uri = new URI(pythonUrl + endPoint);
 	    	HttpHeaders headers = new HttpHeaders();
 	        headers.setContentType(MediaType.APPLICATION_JSON);
 	    	jsonObject.put("symbol",symbol);
@@ -142,10 +141,10 @@ public class MarketService {
 	    	jsonObject.put("end",end);
 	    	
 	    	HttpEntity<String> requestBody = new HttpEntity<>(jsonObject.toString(),headers);
-	    	logger.info("uri: {}\nrequest body: {}",uri.toString(),requestBody.toString());
+	    	log.info("uri: {}\nrequest body: {}",uri.toString(),requestBody.toString());
 	    	restTemplate.postForEntity(uri,requestBody,String.class);
 		} catch (URISyntaxException e) {
-			logger.warn(e.toString());
+			log.warn(e.toString());
 		}
     }
     
