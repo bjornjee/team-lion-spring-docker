@@ -1,13 +1,30 @@
-version: '1.0.0'
+version: '3.0'
+
+volumes:
+  mongodbvol:
+
 services:
-   mongodbcontainer:
-     container_name: mongodbcontainer
-     build:
-       context: .
-       dockerfile: Dockerfile-mongodb
-     image: mongodb
-     ports:
-       - "27017:27017"
-     restart: always
-     volume:
-       - mongodbvol:/data/db
+  mongocontainer:
+    container_name: mongocontainer
+    build:
+      context: .
+      dockerfile: Dockerfile-mongodb
+    image: mongodb
+    ports:
+      - "27017:27017"
+    restart: always
+    volume:
+      - mongodbvol:/data/db
+
+  pythonapp:
+    container_name: pythonapp
+    build:
+      context: .
+      dockerfile: Dockerfile-python
+    image: pythonapp
+    ports:
+      - "5000:5000"
+    links:
+      - mongocontainer:mongocontainer
+    environment:
+      MONGODB_URL: mongocontainer

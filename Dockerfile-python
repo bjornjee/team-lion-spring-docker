@@ -1,0 +1,14 @@
+FROM python:3.8.5
+
+RUN mkdir /app
+WORKDIR /app
+
+COPY ./python/requirements.txt /app
+COPY ./python/Server.py /app
+COPY ./python/Scrapper.py /app
+
+RUN pip install -r requirements.txt --trusted-host pypi.python.org
+
+EXPOSE 5000
+
+ENTRYPOINT python Server.py
