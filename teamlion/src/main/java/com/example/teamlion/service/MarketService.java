@@ -129,11 +129,10 @@ public class MarketService {
     	JSONObject jsonObject = new JSONObject();
     	log.info("In function: runPythonScriptRest");
     	//Set url
-    	final String endPoint = "/api/stock/";
     	// set request body
 		try {
 			RestTemplate restTemplate = new RestTemplate();
-			URI uri = new URI(pythonUrl + endPoint);
+			URI uri = new URI(pythonUrl);
 	    	HttpHeaders headers = new HttpHeaders();
 	        headers.setContentType(MediaType.APPLICATION_JSON);
 	    	jsonObject.put("symbol",symbol);
