@@ -10,14 +10,23 @@ import com.example.teamlion.utils.LionUtil;
 import com.example.teamlion.utils.model.UtilModel;
 
 
+
+import org.json.JSONObject;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,107 +37,126 @@ import java.util.stream.Collectors;
 @Service
 public class MarketService {
 
+    @Autowired
+    private MarketRepository marketRepository;
+    @Autowired
+    private LionUtil utils;
+    @Autowired
+    private AccountRepository accountRepository;
+    
+    @Value("${spring.data.mongodb.uri}")
+    private String mongoUrl;
+    @Value("${pythonFilename}")
+    private String pythonFilename;
+    @Value("${pythonExeFilePath}")
+    private String pythonExe;
+    @Value("${pythonUrl}")
+    private String pythonUrl;
 
-	@Autowired
-	private MarketRepository marketRepository;
-	@Autowired
-	private LionUtil utils;
-	@Autowired
-	private AccountRepository accountRepository;
-
-	@Value("${spring.data.mongodb.uri}")
-	private String mongoUrl;
-	@Value("${pythonFilename}")
-	private String pythonFilename;
-	@Value("${pythonExeFilePath}")
-	private String pythonExe;
-
-	public List<MarketQueryResponseModel> getStockDataPython(MarketQueryRequestModel model) {
-		String symbol = model.getSymbol();
-		String start = model.getStart();
-		String end = model.getEnd();
-		String token = model.getToken();
-		// Check if user is registered
-		UtilModel m = utils.decoder(token);
-		if (!registered(m)) {
-			log.info("User not registered!");
-			return null;
-		}
-		//Check if stock exists in database
-		List<Stock> dates = marketRepository.getStockBySymbolInRange(symbol,start,end);
-		log.info(dates.toString());
-		if (dates.isEmpty()) {
-			//if range does not exist, fetch everything
-			runPythonScript(symbol,start,end);
-		} else {
-			String dbStartDate = String.valueOf(dates.get(0).getDate());
-			String dbEndDate = String.valueOf(dates.get(dates.size()-1).getDate());
-			//If database has request, fetch and return
-			if (dbStartDate.equals(start) && dbEndDate.equals(end)) {
-				return marketRepository.getStockBySymbolInRange(symbol,start,end).stream().map(MarketQueryResponseModel::new).distinct().collect(Collectors.toList());
-			}
-			//fetch missing data
-			if (!dbStartDate.equals(start)) {
-				//Decrement date to prevent duplicates
-				runPythonScript(symbol,start,decrementDate(dbStartDate));
-			}
-			if (!dbEndDate.equals(end)) {
-				//Increment date to prevent duplicates
-				runPythonScript(symbol,incrementDate(dbEndDate),end);
-			}
-		}
-		//Sleep to make sure python script runs before fetching
-		try {
+    public List<MarketQueryResponseModel> getStockDataPython(String symbol, String start, String end, String token) {
+    	// Check if user is registered
+    	UtilModel m = utils.decoder(token);
+    	if (!registered(m)) {
+    		log.info("User not registered!");
+    		return null;
+    	}
+        //Check if stock exists in database
+        List<Stock> dates = marketRepository.getStockBySymbolInRange(symbol,start,end);
+        log.info(dates.toString());
+        if (dates.isEmpty()) {
+        	//if range does not exist, fetch everything
+        	runPythonScriptRest(symbol,start,end);
+        } else {
+        	String dbStartDate = String.valueOf(dates.get(0).getDate());
+            String dbEndDate = String.valueOf(dates.get(dates.size()-1).getDate());
+            //If database has request, fetch and return
+            if (dbStartDate.equals(start) && dbEndDate.equals(end)) {
+            	return marketRepository.getStockBySymbolInRange(symbol,start,end).stream().map(MarketQueryResponseModel::new).distinct().collect(Collectors.toList());
+            }
+            //fetch missing data
+            if (!dbStartDate.equals(start)) {
+            	//Decrement date to prevent duplicates
+            	runPythonScriptRest(symbol,start,decrementDate(dbStartDate));    
+            }
+            if (!dbEndDate.equals(end)) {
+            	//Increment date to prevent duplicates
+            	runPythonScriptRest(symbol,incrementDate(dbEndDate),end);
+            }
+        }      
+        //Sleep to make sure python script runs before fetching
+        try {
 			Thread.sleep(2000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		//Fetch data
-		return marketRepository.getStockBySymbolInRange(symbol,start,end).stream().map(MarketQueryResponseModel::new).distinct().collect(Collectors.toList());
+        //Fetch data
+        return marketRepository.getStockBySymbolInRange(symbol,start,end).stream().map(MarketQueryResponseModel::new).distinct().collect(Collectors.toList());
 
-	}
+    }
+    
+    private boolean registered(UtilModel m) {
+    	if (m ==null) {
+    		return false;
+    	}
+    	String username = m.getUsername();
+    	String password = m.getPassword();
+    	List<AccountEntity> arr = accountRepository.getOneByUsernameAndPassword(username, password);
+    	if (arr.isEmpty()) {
+    		return false;
+    	} 
+    	return true;
+    }
 
-	private boolean registered(UtilModel m) {
-		if (m ==null) {
-			return false;
+    private void runPythonScript(String symbol, String start, String end) {
+    	log.info("In runPythonScript()");
+    	try  {
+    	   String cmd = String.format("%s %s %s %s %s %s",
+    			   pythonExe,
+    			   pythonFilename,
+    			   mongoUrl,
+    			   symbol,
+    			   start,
+    			   end);
+    	   log.info(cmd);
+    	   Process p = Runtime.getRuntime().exec(cmd);
+	    	   
+	    } catch (IOException ex) {
+	    	log.info(ex.toString());
+	    }
+    }
+    
+    public void runPythonScriptRest(String symbol, String start, String end) {
+    	JSONObject jsonObject = new JSONObject();
+    	log.info("In function: runPythonScriptRest");
+    	//Set url
+    	final String endPoint = "/api/stock/";
+    	// set request body
+		try {
+			RestTemplate restTemplate = new RestTemplate();
+			URI uri = new URI(pythonUrl + endPoint);
+	    	HttpHeaders headers = new HttpHeaders();
+	        headers.setContentType(MediaType.APPLICATION_JSON);
+	    	jsonObject.put("symbol",symbol);
+	    	jsonObject.put("start",start);
+	    	jsonObject.put("end",end);
+	    	
+	    	HttpEntity<String> requestBody = new HttpEntity<>(jsonObject.toString(),headers);
+	    	log.info("uri: {}\nrequest body: {}",uri.toString(),requestBody.toString());
+	    	restTemplate.postForEntity(uri,requestBody,String.class);
+		} catch (URISyntaxException e) {
+			log.warn(e.toString());
 		}
-		String username = m.getUsername();
-		String password = m.getPassword();
-		List<AccountEntity> arr = accountRepository.getOneByUsernameAndPassword(username, password);
-		if (arr.isEmpty()) {
-			return false;
-		}
-		return true;
-	}
-
-	private void runPythonScript(String symbol, String start, String end) {
-		log.info("In runPythonScript()");
-		try  {
-			String cmd = String.format("%s %s %s %s %s %s",
-					pythonExe,
-					pythonFilename,
-					mongoUrl,
-					symbol,
-					start,
-					end);
-			log.info(cmd);
-			Process p = Runtime.getRuntime().exec(cmd);
-//
-
-
-		} catch (IOException ex) {
-			log.info(ex.toString());
-		}
-	}
-	private String incrementDate(String date) {
-		return LocalDate.parse(date).plusDays(1).toString();
-	}
-
-	private String decrementDate(String date) {
-		return LocalDate.parse(date).minusDays(1).toString();
-	}
-
-	private void readPythonDataFromStdin(Process p) {
+    }
+    
+    private String incrementDate(String date) {
+    	return LocalDate.parse(date).plusDays(1).toString();
+    }
+    
+    private String decrementDate(String date) {
+    	return LocalDate.parse(date).minusDays(1).toString();
+    }
+    
+    private void readPythonDataFromStdin(Process p) {
 		// try to read data
 		BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));
 		String s;
