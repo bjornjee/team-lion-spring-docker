@@ -4,11 +4,7 @@ COPY /teamlion/pom.xml /teamlion/pom.xml
 WORKDIR /
 RUN mvn -f /teamlion/pom.xml clean package
 
-FROM maven:3.6.3-jdk-11
-ARG MONGO_CONTAINER
-COPY --from=BUILD /target/teamlion-0.0.1-SNAPSHOT.jar app.jar
+FROM openjdk:11
+COPY --from=BUILD /teamlion/target/teamlion-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
-ENV MONGODB_URI=mongodb://${MONGO_CONTAINER}:27017/teamlion
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
-
