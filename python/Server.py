@@ -17,13 +17,12 @@ def post():
       "end": json_data["end"],
    }
    #Get Mongodb var
-   mongodb_url = 'mongodb://localhost:27017/teamlion' if os.getenv('MONGODB_URL') is None else os.getenv('MONGODB_URL')
+   mongodb_url = 'mongodb://mongodb:27017/teamlion'
    Scrapper.scrapeData(mongodb_url, stock["sym"], stock["start"], stock["end"])
    return "", 201
 @app.route("/api/stock",methods=["GET"])
 def get():
-    mongoUrl = 'mongodb://localhost:27017/teamlion' if os.getenv('MONGODB_URL') is None else os.getenv(
-      'MONGODB_URL')
+    mongoUrl = 'mongodb://mongodb:27017/teamlion'
     client = MongoClient(mongoUrl)
     db = client.teamlion
     stocks = db.stock.find()
