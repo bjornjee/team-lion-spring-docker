@@ -4,8 +4,8 @@ volumes:
   mongodbvol:
 
 services:
-  mongocontainer:
-    container_name: mongocontainer
+  mongodb:
+    container_name: mongodb
     build:
       context: .
       dockerfile: Dockerfile-mongodb
@@ -13,18 +13,30 @@ services:
     ports:
       - "27017:27017"
     restart: always
-    volume:
+    volumes:
       - mongodbvol:/data/db
 
-  pythonapp:
-    container_name: pythonapp
+  python-docker:
+    container_name: python-docker
     build:
       context: .
       dockerfile: Dockerfile-python
-    image: pythonapp
+    image: python-docker
     ports:
       - "5000:5000"
     links:
-      - mongocontainer:mongocontainer
+      - mongodb:mongodb
     environment:
-      MONGODB_URL: mongocontainer
+      MONGODB_URL: mongodb://mongodb:27017/teamlion
+
+  app:
+    container_name: app
+    build:
+      context: .
+      dockerfile: Dockerfile-app
+    image: app
+    ports:
+      - "8080:8080"
+    links:
+      - mongodb:mongodb
+      - python-docker:python-docker
