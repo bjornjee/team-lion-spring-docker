@@ -1,5 +1,6 @@
 package com.example.teamlion.service;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,9 @@ import com.example.teamlion.utils.LionUtil;
 
 import java.util.List;
 
+import static com.mongodb.client.model.Aggregates.count;
+
+@Slf4j
 @Component
 public class AccountService {
 
@@ -19,7 +23,7 @@ public class AccountService {
 
     @Autowired
     private LionUtil utils;
-    
+
     //returns a list of all accounts in the database
     public List<AccountEntity> getAllAccounts(){
         return repository.getAll();
@@ -41,20 +45,19 @@ public class AccountService {
         String password = register.getPassword();
         String email = register.getEmail();
 
-        //retrieve last ID to auto increment
-        //AccountModel lastAccount = repository.getLastAccount();
-        //long lastId = lastAccount.getId();
-
         //check if username exists
         if(checkUsernameisUnique(username)){
-        	AccountEntity newAccount = new AccountEntity(repository.count()+1,username,password,email);
+            AccountEntity newAccount = new AccountEntity(repository.count()+1,username,password,email);
             repository.save(newAccount);
-            System.out.printf("There are now %d users\n", repository.count());
+            log.info("User inserted");
+            String message = "There are now " +  String.valueOf(repository.count()) + " users";
+            log.info(message);
             return utils.encoder(username, password);
         }
 
         else{
-            System.out.println("Username already exists");
+            //System.out.println("Username already exists");
+            log.error("Username already exists. Enter a different username");
             return "";
         }
 
@@ -70,20 +73,14 @@ public class AccountService {
         String newPassword = register.getPassword();
         String newEmail = register.getEmail();
 
-        //check if new username is unique
-        //if(checkUsernameisUnique(newUsername)){
-        //update account
         List <AccountEntity> a = repository.getByUsername(username);
         AccountEntity account = a.get(0);
         account.setEmail(newEmail);
         account.setPassword(newPassword);
         account.setUsername(newUsername);
         repository.save(account);
-        //}
+        log.info("User updated");
 
-//        else {
-//            System.out.println("Username already exists");
-//        }
     }
 
 
@@ -92,6 +89,9 @@ public class AccountService {
         List <AccountEntity> a = repository.getByUsername(username);
         AccountEntity account = a.get(0);
         repository.delete(account);
+        log.info("User deleted");
+        String message = "There are now " +  String.valueOf(repository.count()) + " users";
+        log.info(message);
     }
 
 
@@ -110,7 +110,7 @@ public class AccountService {
         List <AccountEntity> a = repository.getByUsername(username);
         AccountEntity account = a.get(0);
         if(login.getPassword().equals(account.getPassword())){
-            return true; //return encrypted username?
+            return true;
         }
         else{
             return false;

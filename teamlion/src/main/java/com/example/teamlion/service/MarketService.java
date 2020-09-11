@@ -14,6 +14,8 @@ import com.example.teamlion.utils.model.UtilModel;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -33,7 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
+@Slf4j
 @Service
 public class MarketService {
 
@@ -172,9 +174,9 @@ public class MarketService {
 		// retrieve data
 		String stockData = data.get(data.size() - 1);
 		if (stockData != "[]") {
-			logger.info(stockData);
+			log.info(stockData);
 			stockData = stockData.substring(2, stockData.length() - 2);
-			logger.info(stockData);
+			log.info(stockData);
 			if (stockData.contains("},{")) {
 				Arrays.stream(stockData.split("},{")).forEach(System.out::println);
 			}
@@ -182,6 +184,6 @@ public class MarketService {
 			// List<String> arr =
 			// Arrays.stream(stockData.split("},")).map(x->x+"}").collect(Collectors.toList());
 		}
-    }
- 
+	}
+
 }
