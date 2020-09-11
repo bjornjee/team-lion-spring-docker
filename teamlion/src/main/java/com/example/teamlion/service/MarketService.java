@@ -65,22 +65,22 @@ public class MarketService {
         log.info(dates.toString());
         if (dates.isEmpty()) {
         	//if range does not exist, fetch everything
-        	runPythonScript(symbol,start,end);
+        	runPythonScriptRest(symbol,start,end);
         } else {
         	String dbStartDate = String.valueOf(dates.get(0).getDate());
             String dbEndDate = String.valueOf(dates.get(dates.size()-1).getDate());
-            //If database has requst, fetch and return
+            //If database has request, fetch and return
             if (dbStartDate.equals(start) && dbEndDate.equals(end)) {
             	return marketRepository.getStockBySymbolInRange(symbol,start,end).stream().map(MarketQueryResponseModel::new).distinct().collect(Collectors.toList());
             }
             //fetch missing data
             if (!dbStartDate.equals(start)) {
             	//Decrement date to prevent duplicates
-            	runPythonScript(symbol,start,decrementDate(dbStartDate));    
+            	runPythonScriptRest(symbol,start,decrementDate(dbStartDate));    
             }
             if (!dbEndDate.equals(end)) {
             	//Increment date to prevent duplicates
-            	runPythonScript(symbol,incrementDate(dbEndDate),end);
+            	runPythonScriptRest(symbol,incrementDate(dbEndDate),end);
             }
         }      
         //Sleep to make sure python script runs before fetching
