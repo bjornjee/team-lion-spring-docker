@@ -42,7 +42,14 @@ class Scrapper:
         #print json for java service
         print(df.to_json(orient="records"))
         self.stock.insert_many(records)
-        
+
+def scrapeData(url, sym, start, end):
+    print('''
+           {},{},{},{}
+           '''.format(url,sym,start,end))
+    service = Scrapper(url)
+    service.downloadStockData(sym,start,end)
+    end_time = datetime.now()     
         
 if __name__ =='__main__':
     start_time = datetime.now()

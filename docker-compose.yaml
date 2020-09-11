@@ -1,0 +1,13 @@
+version: '1.0.0'
+services:
+   mongodbcontainer:
+     container_name: mongodbcontainer
+     build:
+       context: .
+       dockerfile: Dockerfile-mongodb
+     image: mongodb
+     ports:
+       - "27017:27017"
+     restart: always
+     volume:
+       - mongodbvol:/data/db
