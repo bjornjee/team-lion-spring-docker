@@ -9,15 +9,24 @@ import com.example.teamlion.repository.MarketRepository;
 import com.example.teamlion.utils.LionUtil;
 import com.example.teamlion.utils.model.UtilModel;
 
+
+
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,12 +51,10 @@ public class MarketService {
     private String pythonFilename;
     @Value("${pythonExeFilePath}")
     private String pythonExe;
+    @Value("${pythonUrl}")
+    private String pythonUrl;
 
-    public List<MarketQueryResponseModel> getStockDataPython(MarketQueryRequestModel model) {
-    	String symbol = model.getSymbol();
-    	String start = model.getStart();
-    	String end = model.getEnd();
-    	String token = model.getToken();
+    public List<MarketQueryResponseModel> getStockDataPython(String symbol, String start, String end, String token) {
     	// Check if user is registered
     	UtilModel m = utils.decoder(token);
     	if (!registered(m)) {
@@ -113,13 +120,33 @@ public class MarketService {
     			   end);
     	   logger.info(cmd);
     	   Process p = Runtime.getRuntime().exec(cmd);
-//    	 
-		   
 	    	   
 	    } catch (IOException ex) {
 	    	logger.info(ex.toString());
 	    }
     }
+    
+    public void runPythonScriptRest(String symbol, String start, String end) {
+    	JSONObject jsonObject = new JSONObject();
+    	logger.info("In function: runPythonScriptRest");
+    	// set request body
+		try {
+			RestTemplate restTemplate = new RestTemplate();
+			URI uri = new URI(pythonUrl);
+	    	HttpHeaders headers = new HttpHeaders();
+	        headers.setContentType(MediaType.APPLICATION_JSON);
+	    	jsonObject.put("symbol",symbol);
+	    	jsonObject.put("start",start);
+	    	jsonObject.put("end",end);
+	    	
+	    	HttpEntity<String> requestBody = new HttpEntity<>(jsonObject.toString(),headers);
+	    	logger.info("uri: {}\nrequest body: {}",uri.toString(),requestBody.toString());
+	    	restTemplate.postForEntity(uri,requestBody,String.class);
+		} catch (URISyntaxException e) {
+			logger.warn(e.toString());
+		}
+    }
+    
     private String incrementDate(String date) {
     	return LocalDate.parse(date).plusDays(1).toString();
     }
