@@ -41,7 +41,7 @@ class Scrapper:
         #print(records)
         #print json for java service
         print(df.to_json(orient="records"))
-        if (not records):
+        if (records):
             self.stock.insert_many(records)
 
 def scrapeData(url, sym, start, end):
