@@ -133,6 +133,7 @@ public class MarketService {
 		try {
 			RestTemplate restTemplate = new RestTemplate();
 			URI uri = new URI(pythonUrl);
+			log.info("uri: {}\n", uri.toString());
 	    	HttpHeaders headers = new HttpHeaders();
 	        headers.setContentType(MediaType.APPLICATION_JSON);
 	    	jsonObject.put("symbol",symbol);
